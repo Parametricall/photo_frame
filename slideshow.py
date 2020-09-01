@@ -1,113 +1,106 @@
 import os
-import time
 import random
-from datetime import date, datetime
-import tkinter as tk
-from PIL import Image, ImageTk, ImageDraw, ImageFont
-import configparser
-
-from utilities import *
-
 import logging
+import vlc
+import tkinter as tk
+from PIL import Image, ImageTk
 
-config = configparser.ConfigParser()
-config.read("./config.ini")
-
-LOG_FILENAME = 'logging.out'
-logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
-
-# delay in seconds
-SLIDESHOW_DELAY = 30
-
-# delay in seconds
-GET_WEATHER_DELAY = 1 * 3600  # 1 hours
-
-os_name = os.name
-ON_LINUX = os_name == "posix"
-
-if ON_LINUX:
-    IMG_DIR = "/media/usb/images"
-else:
-    IMG_DIR = "./media/usb/images"
-    SLIDESHOW_DELAY = 5
-
-TIME_FORMAT = "%H:%M"  # e.g. 18:32
-DATE_FORMAT = "%a %#d %b"  # e.g Sun 16 Aug
-ALT_DATE_FORMAT = "%#d %b %Y"  # 6 Nov 2018
-
-if os.path.exists("/usr/share/fonts"):
-    font_path = "/usr/share/fonts"
-else:
-    font_path = ""
-
-FONT_PATH = "f{font_path}/dejavu/DejaVuSans.ttf"
-
-# rgba
-TEXT_COLOR = (255, 255, 255, 255)  # white
-
-SHOW_GRID = False
-GRID_SIZE = 20
-TIME_TO_DATE_RATIO = 2
-
-FACE_DETECTION = False
+from utilities import (
+    get_path_of_original_images,
+    get_weather_from_online,
+    add_text_to_image,
+)
+from globals import (
+    SLIDESHOW_DELAY,
+    GET_WEATHER_DELAY,
+    IMG_DIR,
+    FACE_DETECTION,
+    ON_LINUX
+)
 if FACE_DETECTION:
     from face_detection import static_image_face_detection
 
 
-class App(tk.Tk):
-    def __init__(self, paths_to_images):
+LOG_FILENAME = 'logging.out'
+logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
+
+
+class Slideshow(tk.Tk):
+    def __init__(self):
+        # Setup main window
         tk.Tk.__init__(self)
-        self.w = self.winfo_screenwidth()
-        self.h = self.winfo_screenheight()
-        self.overrideredirect(1)
-        self.geometry(f"{self.w}x{self.h}+0+0")
-        self.delay = (SLIDESHOW_DELAY * 1000)
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+        self.overrideredirect(True)
+        self.geometry(f"{self.screen_width}x{self.screen_height}+0+0")
+        self.bind('<Escape>', self.close)
+
+        # Setup Label widget (for displaying images)
+        self.picture_display = tk.Label(self)
+        self.picture_display.configure(bg="black")
+
+        # Setup Frame widget (to hold vlc player instance)
+        self.video_panel = tk.Frame(self)
+
+        # Initialise vlc player
+        self.vlc_instance = vlc.Instance()
+        self.vlc_player = self.vlc_instance.media_player_new()
+
+        # Extras
         self.pictures = None
         self.picture_index = None
-        self.fetch_image_paths()
+        self.fetch_slideshow_files()
+
         self.weather = None
         self.weather_icon = None
 
-        self.picture_display = tk.Label(self)
-        self.picture_display.configure(bg="black")
-        self.picture_display.pack(expand=True, fill="both")
-        self.bind('<Escape>', self.close)
+        self.delay = (SLIDESHOW_DELAY * 1000)
 
-    def fetch_image_paths(self):
-        self.pictures = get_path_of_original_images(IMG_DIR)
-        random.shuffle(self.pictures)
-
-    def get_next_random_image(self):
-        num_images = len(self.pictures)
-        index = self.picture_index
-
-        if num_images == 0:
-            raise RuntimeError("Could not find any images to load")
-
-        if index is None:
-            self.picture_index = 0
-            return 0
-
-        if index >= num_images - 1:
-            self.fetch_image_paths()
-            index = 0
+    def get_weather(self):
+        """
+        This method is set to run every "GET_WEATHER_DELAY" seconds.  It
+        will run in the background and should not affect the image
+        slideshow.  If the weather cannot be fetched, then it will retry
+        after 30 seconds.
+        """
+        logging.info("fetching weather")
+        self.weather = get_weather_from_online()
+        if self.weather is None:
+            logging.warning("Failed to get weather, retrying in 30 seconds")
+            self.after((30 * 1000), self.get_weather)
         else:
-            index += 1
+            self.weather_icon = self.weather["icon"]
+            self.after(GET_WEATHER_DELAY * 1000, self.get_weather)
 
-        self.picture_index = index
-        return index
+    def fetch_slideshow_files(self):
+        file_paths = get_path_of_original_images(IMG_DIR)
+        random.shuffle(file_paths)
+        self.pictures = iter(file_paths)
 
     def start_slideshow(self):
-        file_path = self.pictures[self.get_next_random_image()]
-        if file_path.endswith((".jpg", ".png")):
-            self.show_image(file_path)
-        else:
-            self.play_video(file_path)
+        self.get_weather()
+        self.show_slides()
 
     def show_slides(self):
-        image_path = self.pictures[self.get_next_random_image()]
+        try:
+            file_path = next(self.pictures)
+        except StopIteration:
+            print("STOPPED iteration")
+            self.fetch_slideshow_files()
+            file_path = next(self.pictures)
+        if file_path.endswith((".jpg", ".png")):
+            self.show_image(file_path)
+        elif file_path.endswith(".MP4"):
+            self.play_video(file_path)
+        else:
+            logging.error(f"{file_path} is not a supported file format")
+
+    def show_image(self, image_path):
+        self.video_panel.pack_forget()
+        self.picture_display.pack(expand=True, fill="both")
         original_image = Image.open(image_path)
-        resized = original_image.resize((self.w, self.h), Image.ANTIALIAS)
+        resized = original_image.resize(
+            (self.screen_width, self.screen_height), Image.ANTIALIAS)
 
         add_text_to_image(resized, image_path, self.weather_icon)
 
@@ -122,29 +115,38 @@ class App(tk.Tk):
         self.title(os.path.basename(image_path))
         self.after(self.delay, self.show_slides)
 
+    def play_video(self, video_path):
+        self.picture_display.pack_forget()
+        self.video_panel.pack(fill=tk.BOTH, expand=True)
+        self.vlc_player.stop()
+
+        if ON_LINUX:
+            self.vlc_player.set_xwindow(self.video_panel.winfo_id())
+        else:
+            self.vlc_player.set_hwnd(self.video_panel.winfo_id())
+
+        media = self.vlc_instance.media_new(video_path)  # media instance
+        self.vlc_player.set_media(media)  # set media used by media player
+        # self.player.set_fullscreen(True)
+
+        self.vlc_player.play()
+
+        while not self.vlc_player.is_playing():
+            pass
+
+        self.title(os.path.basename(video_path))
+        self.after(self.vlc_player.get_length(), self.show_slides)
+
     # noinspection PyUnusedLocal
     def close(self, event=None):
         self.destroy()
 
-    def get_weather(self):
-        logging.info("fetching weather")
-        self.weather = get_weather()
-        if self.weather is None:
-            logging.warning("Failed to get weather, retrying in 30 seconds")
-            self.after((30 * 1000), self.get_weather)
-        else:
-            self.weather_icon = self.weather["icon"]
-            self.after(GET_WEATHER_DELAY * 1000, self.get_weather)
 
 if __name__ == '__main__':
     try:
         logging.info("Starting slideshow")
-        image_files = get_path_of_original_images(IMG_DIR)
-
-        app = App(image_files)
-        app.get_weather()
-        app.show_slides()
-        app.mainloop()
-    except:
-        logging.exception("Got exception on main handler")
-        raise
+        slideshow = Slideshow()
+        slideshow.start_slideshow()
+        slideshow.mainloop()
+    except BaseException as e:
+        logging.exception(e)

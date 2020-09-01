@@ -1,30 +1,17 @@
-import json
-import requests
-from requests.adapters import HTTPAdapter
 import os
 import time
-import random
-from datetime import date, datetime
-import tkinter as tk
-from PIL import Image, ImageTk, ImageDraw, ImageFont
-
+import json
+import requests
 import logging
-
-BRISBANE_LAT = -27.4698
-BRISBANE_LON = 153.0251
-
-DAYBORO_LAT = -27.1962
-DAYBORO_LONG = 152.8243
-
-EXCLUDE = "minutely"
-
-API_TOKEN = "d1414e08ebfc105903662cc153faf764"
-API_URL_BASE = "https://api.openweathermap.org"
-API_URL = f"{API_URL_BASE}/data/2.5/onecall?lat={DAYBORO_LAT}&lon" \
-          f"={DAYBORO_LONG}&exclude={EXCLUDE}&appid={API_TOKEN}"
+from requests.adapters import HTTPAdapter
+from datetime import date, datetime
+from PIL import Image, ImageDraw, ImageFont
+from globals import API_URL_BASE, API_URL, GRID_SIZE, TEXT_COLOR, SHOW_GRID, \
+    TIME_FORMAT, ALT_DATE_FORMAT, TIME_TO_DATE_RATIO, FONT_PATH, \
+    DATE_FORMAT, IMG_DIR
 
 
-def get_weather():
+def get_weather_from_online():
     try:
         session = requests.Session()
         session.mount(API_URL_BASE, HTTPAdapter(
@@ -38,13 +25,13 @@ def get_weather():
         json_res = json.loads(response.content)
         weather = json_res["hourly"][1]["weather"][0]
     else:
-        logging.error("Unable to fetch current weather")
         weather = None
 
     return weather
 
 
-def add_text_to_image(img, image_path, icon, grid_size=20, show_grid=False):
+def add_text_to_image(img, image_path, icon, grid_size=GRID_SIZE,
+                      show_grid=SHOW_GRID):
     img_width, img_height = img.size
     cell_width = int(img_width / grid_size)
     cell_height = int(img_height / grid_size)
@@ -69,7 +56,7 @@ def add_text_to_image(img, image_path, icon, grid_size=20, show_grid=False):
         icon_img = Image.open(icon_path)
         icon_width, icon_height = icon_img.size
 
-        x = ((grid_size - 4) * cell_width) - (icon_width)
+        x = ((grid_size - 4) * cell_width) - icon_width
         y = (grid_size - 2) * cell_height - 10
         img.paste(icon_img, box=(x, y), mask=icon_img)
 
@@ -81,14 +68,15 @@ def add_location_and_year(
         cell_width,
         cell_height,
         date_font_size,
-        alt_date_format="%#d %b %Y",
-        grid_size=20,
-        text_color=(255, 255, 255, 255),
+        alt_date_format=ALT_DATE_FORMAT,
+        grid_size=GRID_SIZE,
+        text_color=TEXT_COLOR,
 ):
     exif = img.getexif()
 
     creation_time = exif.get(36867)
 
+    # noinspection PyBroadException
     try:
         if creation_time is None:
             creation_time = img.info["Creation Time"]
@@ -103,14 +91,14 @@ def add_location_and_year(
             date_obj = datetime.strptime(cre_date, "%d/%m/%Y")
 
         formatted_date = date_obj.strftime(alt_date_format)
-    except:
+    except BaseException:
         return
 
     rel_folders, _ = os.path.split(path)
     folders = rel_folders.split("/")
     cur_folder = folders[-1]
     dir_name = " ".join(cur_folder.split('_')[:-1])
-    dir_name = dir_name.replace("\\", "")
+    dir_name = dir_name.split("\\")[-1]
 
     meta_font, meta_width, meta_height = get_font_width_height(
         draw, creation_time, date_font_size
@@ -122,7 +110,7 @@ def add_location_and_year(
               font=meta_font, stroke_width=3, stroke_fill="black")
 
     draw.text((x_pos, int((grid_size - 3) * cell_height)), dir_name,
-              fill=grid_size,
+              fill=text_color,
               font=meta_font, stroke_width=3, stroke_fill="black")
 
 
@@ -130,10 +118,10 @@ def add_current_time_to_image(
         draw,
         cell_width,
         cell_height,
-        time_format="%H:%M",
-        date_format="%a %#d %b",
-        grid_size=20,
-        text_color=(255, 255, 255, 255),
+        time_format=TIME_FORMAT,
+        date_format=DATE_FORMAT,
+        grid_size=GRID_SIZE,
+        text_color=TEXT_COLOR,
 ):
     display_time = time.strftime(time_format)
     display_date = date.today().strftime(date_format)
@@ -162,7 +150,7 @@ def add_current_time_to_image(
 
 
 def draw_grid(draw, cell_width, cell_height, img_width, img_height,
-              grid_size=20):
+              grid_size=GRID_SIZE):
     for i in range(1, grid_size + 1):
         draw.line([(i * cell_width, 0), (i * cell_width + 10, img_height)],
                   fill="purple",
@@ -173,7 +161,7 @@ def draw_grid(draw, cell_width, cell_height, img_width, img_height,
 
 
 def get_font_width_height(draw, ink, font_size, ratio=1,
-                          font_path="/usr/share/fonts"):
+                          font_path=FONT_PATH):
     try:
         font = ImageFont.truetype(font_path, int(
             font_size * ratio))
@@ -186,7 +174,8 @@ def get_font_width_height(draw, ink, font_size, ratio=1,
     return font, width, height
 
 
-def get_font_info(draw, display_date, display_time, cell_height, t2dr=2):
+def get_font_info(draw, display_date, display_time, cell_height,
+                  t2dr=TIME_TO_DATE_RATIO):
     date_font_size = 1
 
     date_font, date_width, date_height = get_font_width_height(
@@ -220,7 +209,7 @@ def get_font_info(draw, display_date, display_time, cell_height, t2dr=2):
     }
 
 
-def get_path_of_original_images(img_dir):
+def get_path_of_original_images(img_dir=IMG_DIR):
     files = os.scandir(img_dir)
 
     images = []
@@ -228,7 +217,7 @@ def get_path_of_original_images(img_dir):
         if file.is_dir():
             images += get_path_of_original_images(file.path)
             continue
-        if file.name.endswith((".jpg", ".png")):
+        if file.name.endswith((".jpg", ".png", ".MP4")):
             images.append(f"{img_dir}/{file.name}")
 
     return images
