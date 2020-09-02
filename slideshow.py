@@ -1,7 +1,6 @@
 import os
 import random
 import logging
-import vlc
 import tkinter as tk
 from PIL import Image, ImageTk
 
@@ -14,15 +13,11 @@ from globals import (
     SLIDESHOW_DELAY,
     GET_WEATHER_DELAY,
     IMG_DIR,
-    FACE_DETECTION,
-    ON_LINUX
+    FACE_DETECTION, ON_LINUX,
 )
+
 if FACE_DETECTION:
     from face_detection import static_image_face_detection
-
-
-LOG_FILENAME = 'logging.out'
-logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 
 class Slideshow(tk.Tk):
@@ -38,13 +33,7 @@ class Slideshow(tk.Tk):
         # Setup Label widget (for displaying images)
         self.picture_display = tk.Label(self)
         self.picture_display.configure(bg="black")
-
-        # Setup Frame widget (to hold vlc player instance)
-        self.video_panel = tk.Frame(self)
-
-        # Initialise vlc player
-        self.vlc_instance = vlc.Instance()
-        self.vlc_player = self.vlc_instance.media_player_new()
+        self.picture_display.pack(expand=True, fill="both")
 
         # Extras
         self.pictures = None
@@ -90,14 +79,11 @@ class Slideshow(tk.Tk):
             file_path = next(self.pictures)
         if file_path.endswith((".jpg", ".png")):
             self.show_image(file_path)
-        elif file_path.endswith(".MP4"):
-            self.play_video(file_path)
         else:
             logging.error(f"{file_path} is not a supported file format")
+            self.show_slides()
 
     def show_image(self, image_path):
-        self.video_panel.pack_forget()
-        self.picture_display.pack(expand=True, fill="both")
         original_image = Image.open(image_path)
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
@@ -115,34 +101,25 @@ class Slideshow(tk.Tk):
         self.title(os.path.basename(image_path))
         self.after(self.delay, self.show_slides)
 
-    def play_video(self, video_path):
-        self.picture_display.pack_forget()
-        self.video_panel.pack(fill=tk.BOTH, expand=True)
-        self.vlc_player.stop()
-
-        if ON_LINUX:
-            self.vlc_player.set_xwindow(self.video_panel.winfo_id())
-        else:
-            self.vlc_player.set_hwnd(self.video_panel.winfo_id())
-
-        media = self.vlc_instance.media_new(video_path)  # media instance
-        self.vlc_player.set_media(media)  # set media used by media player
-        # self.player.set_fullscreen(True)
-
-        self.vlc_player.play()
-
-        while not self.vlc_player.is_playing():
-            pass
-
-        self.title(os.path.basename(video_path))
-        self.after(self.vlc_player.get_length(), self.show_slides)
-
     # noinspection PyUnusedLocal
     def close(self, event=None):
         self.destroy()
 
 
 if __name__ == '__main__':
+    LOG_FILENAME = 'logging.out'
+    logging.basicConfig(
+        filename=LOG_FILENAME,
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+
+    if ON_LINUX:
+        if os.environ.get("DISPLAY", None) is not None:
+            os.environ["DISPLAY"] = ":0"
+            logging.info("Setting environment variable: DISPLAY = :0")
+
     try:
         logging.info("Starting slideshow")
         slideshow = Slideshow()

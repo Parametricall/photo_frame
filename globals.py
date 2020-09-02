@@ -1,5 +1,11 @@
 import os
 
+# import logging
+
+# LOG_FILENAME = 'logging.out'
+# logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO,
+#                     datefmt="%Y-%m-%d %H:%M:%S")
+
 # delay in seconds
 SLIDESHOW_DELAY = 30
 
@@ -14,6 +20,10 @@ if ON_LINUX:
 else:
     IMG_DIR = "./media/usb/images"
     SLIDESHOW_DELAY = 2
+
+EXCLUDE_DIRS = [
+    "Videos_2020"
+]
 
 TIME_FORMAT = "%H:%M"  # e.g. 18:32
 DATE_FORMAT = "%a %#d %b"  # e.g Sun 16 Aug
@@ -49,3 +59,22 @@ API_URL_BASE = "https://api.openweathermap.org"
 # noinspection SpellCheckingInspection
 API_URL = f"{API_URL_BASE}/data/2.5/onecall?lat={DAYBORO_LAT}&lon" \
           f"={DAYBORO_LONG}&exclude={EXCLUDE}&appid={API_TOKEN}"
+
+WEATHER_ICONS = {
+    "01d": "clear_day",
+    "01n": "clear_night",
+    "02d": "few_clouds_day",
+    "02n": "few_clouds_night",
+    "03d": "cloudy",
+    "03n": "cloudy",
+    "04d": "cloudy",
+    "04n": "cloudy",
+    "09d": "rain",
+    "09n": "rain",
+    "10d": "rain",
+    "10n": "rain",
+    "11d": "thunderstorm",
+    "11n": "thunderstorm",
+    "50d": "mist",
+    "50n": "mist",
+}

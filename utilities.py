@@ -8,7 +8,7 @@ from datetime import date, datetime
 from PIL import Image, ImageDraw, ImageFont
 from globals import API_URL_BASE, API_URL, GRID_SIZE, TEXT_COLOR, SHOW_GRID, \
     TIME_FORMAT, ALT_DATE_FORMAT, TIME_TO_DATE_RATIO, FONT_PATH, \
-    DATE_FORMAT, IMG_DIR
+    DATE_FORMAT, IMG_DIR, EXCLUDE_DIRS, WEATHER_ICONS
 
 
 def get_weather_from_online():
@@ -48,11 +48,12 @@ def add_text_to_image(img, image_path, icon, grid_size=GRID_SIZE,
                           date_font_size)
 
     # Add weather icon to image
-    if icon is not None:
+    weather_icon = WEATHER_ICONS.get(icon, None)
+    if weather_icon is not None:
         if cell_width > 100:
-            icon_path = f"./icons/64px/{icon}.png"
+            icon_path = f"./icons/64px/{weather_icon}.png"
         else:
-            icon_path = f"./icons/128px/{icon}.png"
+            icon_path = f"./icons/128px/{weather_icon}.png"
         icon_img = Image.open(icon_path)
         icon_width, icon_height = icon_img.size
 
@@ -215,7 +216,10 @@ def get_path_of_original_images(img_dir=IMG_DIR):
     images = []
     for file in files:
         if file.is_dir():
-            images += get_path_of_original_images(file.path)
+            if file.name in EXCLUDE_DIRS:
+                pass
+            else:
+                images += get_path_of_original_images(file.path)
             continue
         if file.name.endswith((".jpg", ".png", ".MP4")):
             images.append(f"{img_dir}/{file.name}")
