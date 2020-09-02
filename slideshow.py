@@ -116,7 +116,7 @@ if __name__ == '__main__':
     )
 
     if ON_LINUX:
-        if os.environ.get("DISPLAY", None) is not None:
+        if os.environ.get("DISPLAY", None) is None:
             os.environ["DISPLAY"] = ":0"
             logging.info("Setting environment variable: DISPLAY = :0")
 
