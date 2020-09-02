@@ -50,7 +50,7 @@ def add_text_to_image(img, image_path, icon, grid_size=GRID_SIZE,
     # Add weather icon to image
     weather_icon = WEATHER_ICONS.get(icon, None)
     if weather_icon is not None:
-        if cell_width > 100:
+        if cell_width < 100:
             icon_path = f"./icons/64px/{weather_icon}.png"
         else:
             icon_path = f"./icons/128px/{weather_icon}.png"
