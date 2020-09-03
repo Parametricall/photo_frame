@@ -43,9 +43,9 @@ def add_text_to_image(img, image_path, icon, grid_size=GRID_SIZE,
                   img_height)
 
     date_font_size = add_current_time_to_image(draw, cell_width, cell_height, )
-    add_location_and_year(draw, img, image_path,
-                          cell_width, cell_height,
-                          date_font_size)
+    # add_location_and_year(draw, img, image_path,
+    #                       cell_width, cell_height,
+    #                       date_font_size)
 
     # Add weather icon to image
     weather_icon = WEATHER_ICONS.get(icon, None)
@@ -213,15 +213,21 @@ def get_font_info(draw, display_date, display_time, cell_height,
 def get_path_of_original_images(img_dir=IMG_DIR):
     files = os.scandir(img_dir)
 
+    images_to_montage = []
     images = []
     for file in files:
         if file.is_dir():
             if file.name in EXCLUDE_DIRS:
                 pass
+            elif file.name == "montage":
+                output = get_path_of_original_images(file.path)
+                images_to_montage += [output["images"]]
             else:
-                images += get_path_of_original_images(file.path)
+                output = get_path_of_original_images(file.path)
+                images += output["images"]
+                images_to_montage += output["montage"]
             continue
         if file.name.endswith((".jpg", ".png", ".MP4")):
             images.append(f"{img_dir}/{file.name}")
 
-    return images
+    return {"images": images, "montage": images_to_montage}
