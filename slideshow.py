@@ -25,7 +25,7 @@ try:
 except Exception as e:
     print("SLIDESHOW_DELAY incorrect")
     print(e)
-    logging.warning(e)
+    # logging.warning(e)
 
 try:
     # Pass image directory from command line
@@ -34,7 +34,7 @@ try:
 except IndexError as e:
     print("IMG_DIR Incorrect ")
     print(e)
-    logging.warning(e)
+    # logging.warning(e)
 
 
 def get_weather_from_online():

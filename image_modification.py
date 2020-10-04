@@ -243,7 +243,7 @@ class ImageModification:
         return x
 
     def add_temperature(self, weather_x):
-        if self.temp is None:
+        if self.temp is None or weather_x is None:
             return
 
         width, height = self.get_text_size(self.temp, self.base_font)
