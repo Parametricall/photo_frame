@@ -21,11 +21,11 @@ ON_LINUX = os_name == "posix"
 if ON_LINUX:
     IMG_DIR = "/media/usb/images"
 else:
-    IMG_DIR = "./media/usb/images"
+    IMG_DIR = "./media/usb/images/Iceland_2019"
     SLIDESHOW_DELAY = 2
 
 EXCLUDE_DIRS = [
-    "Videos_2020"
+    # "Videos_2020"
 ]
 
 CURRENT_TIME_FORMAT = "%H:%M"  # e.g. 18:32

@@ -3,7 +3,8 @@ import requests
 import json
 import random
 import logging
-
+import sys
+import vlc
 import tkinter as tk
 from PIL import Image, ImageTk
 from requests.adapters import HTTPAdapter
@@ -52,7 +53,7 @@ def get_path_of_original_images(img_dir=globals.IMG_DIR):
             else:
                 output = get_path_of_original_images(file.path)
                 images += output
-        elif file.name.endswith((".jpg", ".png")):
+        elif file.name.endswith((".jpg", ".png", ".mp4", ".MP4")):
             images.append(f"{img_dir}/{file.name}")
         else:
             logger.warning(f"Not supported file format: {file.path}")
@@ -73,7 +74,13 @@ class Slideshow(tk.Tk):
         # Setup Label widget (for displaying images)
         self.picture_display = tk.Label(self)
         self.picture_display.configure(bg="black")
-        self.picture_display.pack(expand=True, fill="both")
+
+        # Setup Frame widget (to hold vlc player instance)
+        self.video_panel = tk.Frame(self)
+
+        # Initialise vlc player
+        self.vlc_instance = vlc.Instance()
+        self.vlc_player = self.vlc_instance.media_player_new()
 
         # Extras
         self.pictures = None
@@ -135,9 +142,18 @@ class Slideshow(tk.Tk):
         else:
             raise NotImplementedError("number of images is still None")
 
-        self.show_image(image_path)
+        # self.show_image(image_path)
+        if image_path.endswith((".jpg", ".png")):
+            self.show_image(image_path)
+        elif image_path.endswith((".MP4", ".mp4")):
+            self.play_video(image_path)
+        else:
+            raise NotImplementedError("We shouldn never reach here")
 
     def show_image(self, image_path):
+        self.video_panel.pack_forget()
+        self.picture_display.pack(expand=True, fill="both")
+
         logger.debug("Opening image")
         original_image = Image.open(image_path)
         resized = original_image.resize(
@@ -154,6 +170,28 @@ class Slideshow(tk.Tk):
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
         self.after(self.delay, self.show_slides)
+
+    def play_video(self, video_path):
+        self.picture_display.pack_forget()
+        self.video_panel.pack(fill=tk.BOTH, expand=True)
+        self.vlc_player.stop()
+
+        if ON_LINUX:
+            self.vlc_player.set_xwindow(self.video_panel.winfo_id())
+        else:
+            self.vlc_player.set_hwnd(self.video_panel.winfo_id())
+
+        media = self.vlc_instance.media_new(video_path)  # media instance
+        self.vlc_player.set_media(media)  # set media used by media player
+        # self.player.set_fullscreen(True)
+
+        self.vlc_player.play()
+
+        while not self.vlc_player.is_playing():
+            pass
+
+        self.title(os.path.basename(video_path))
+        self.after(self.vlc_player.get_length(), self.show_slides)
 
     # noinspection PyUnusedLocal
     def close(self, event=None):
