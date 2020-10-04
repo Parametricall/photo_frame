@@ -199,7 +199,16 @@ class ImageModification:
 
         path = os.path.dirname(self.img_path)
         location = os.path.basename(path)
-        clean_location = " ".join(location.split("_"))
+
+        split_location = location.split("_")
+        clean_words = []
+        for word in split_location:
+            try:
+                int(word)
+            except:
+                clean_words.append(word)
+
+        clean_location = " ".join(clean_words)
         _, height = self.get_text_size(clean_location, self.base_font)
         x = self.left_border
         y = self.bottom_border - self.general_text_height - height
