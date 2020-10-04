@@ -1,11 +1,10 @@
 import os
-import sys
 import random
 import logging
 import tkinter as tk
 from PIL import Image, ImageTk
 
-from utilities import (
+from utilities_orig import (
     get_path_of_original_images,
     get_weather_from_online,
     add_text_to_image,
@@ -14,31 +13,12 @@ from globals import (
     SLIDESHOW_DELAY,
     GET_WEATHER_DELAY,
     IMG_DIR,
-    ON_LINUX,
+    FACE_DETECTION, ON_LINUX,
 )
+from montage_generator import create_montage
 
-# print(IMG_DIR)
-
-"""
-# Pass slideshow delay from command line ie slideshow.py 5 If nothing passed use default 30secs
-"""
-try:
-    SLIDESHOW_DELAY = int(sys.argv[
-                              1])  # Pass slideshow delay from command line ie slideshow.py 5
-except Exception as e:
-    print("SLIDESHOW_DELAY incorrect")
-    print(e)
-
-try:
-    IMG_DIR = sys.argv[
-        2]  # Pass image directory from command line ie slideshow.py 5 '/images/'
-except IndexError as e:
-    print("IMG_DIR Incorrect ")
-    print(e)
-
-
-# if FACE_DETECTION:
-#     from face_detection import static_image_face_detection
+if FACE_DETECTION:
+    from face_detection import static_image_face_detection
 
 
 class Slideshow(tk.Tk):
@@ -63,7 +43,6 @@ class Slideshow(tk.Tk):
 
         self.weather = None
         self.weather_icon = None
-        self.temp = None
 
         self.delay = (SLIDESHOW_DELAY * 1000)
 
@@ -75,20 +54,42 @@ class Slideshow(tk.Tk):
         after 30 seconds.
         """
         logging.info("fetching weather")
-        self.weather, self.temp = get_weather_from_online()
+        self.weather = get_weather_from_online()
         if self.weather is None:
             logging.warning("Failed to get weather, retrying in 30 seconds")
             self.after((30 * 1000), self.get_weather)
         else:
             self.weather_icon = self.weather["icon"]
             self.after(GET_WEATHER_DELAY * 1000, self.get_weather)
-        if self.temp is None:
-            self.temp = ""
 
     def fetch_slideshow_files(self):
         file_paths = get_path_of_original_images(IMG_DIR)
-        random.shuffle(file_paths)
-        self.pictures = iter(file_paths)
+
+        single_images = file_paths["images"]
+        images = [Image.open(img) for img in single_images]
+
+        for montage in file_paths["montage"]:
+            random.shuffle(montage)
+            num_photos = len(montage)
+            num_photos_in_montage = 4
+
+            num_montages = num_photos // num_photos_in_montage
+            extra_montage = num_photos % num_photos_in_montage
+
+            montage_images = []
+            for i in range(num_montages):
+                new_montage = create_montage(3840, 2160, montage[(i *
+                                                                  num_photos_in_montage):num_photos_in_montage])
+                montage_images.append(new_montage)
+
+            if extra_montage:
+                montage_images.append(create_montage(3840, 2160, montage[(-1 *
+                                                                          num_photos_in_montage):]))
+
+            images += montage_images
+        random.shuffle(images)
+
+        self.pictures = iter(images)
 
     def start_slideshow(self):
         self.get_weather()
@@ -101,28 +102,26 @@ class Slideshow(tk.Tk):
             print("STOPPED iteration")
             self.fetch_slideshow_files()
             file_path = next(self.pictures)
-        if file_path.endswith((".jpg", ".png")):
-            self.show_image(file_path)
-        else:
-            logging.error(f"{file_path} is not a supported file format")
-            self.show_slides()
+
+        self.show_image(file_path)
 
     def show_image(self, image_path):
-        original_image = Image.open(image_path)
+        # original_image = Image.open(image_path)
+        original_image = image_path
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
 
-        add_text_to_image(resized, image_path, self.weather_icon, self.temp)
+        add_text_to_image(resized, image_path, self.weather_icon)
 
-        # if FACE_DETECTION:
-        #     face_image = static_image_face_detection(resized)
-        #     new_img = ImageTk.PhotoImage(Image.fromarray(face_image))
-        # else:
-        new_img = ImageTk.PhotoImage(resized)
+        if FACE_DETECTION:
+            face_image = static_image_face_detection(resized)
+            new_img = ImageTk.PhotoImage(Image.fromarray(face_image))
+        else:
+            new_img = ImageTk.PhotoImage(resized)
 
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
-        self.title(os.path.basename(image_path))
+        # self.title(os.path.basename(image_path))
         self.after(self.delay, self.show_slides)
 
     # noinspection PyUnusedLocal
@@ -151,3 +150,4 @@ if __name__ == '__main__':
         slideshow.mainloop()
     except BaseException as e:
         logging.exception(e)
+        raise

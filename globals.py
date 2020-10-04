@@ -29,21 +29,17 @@ TIME_FORMAT = "%H:%M"  # e.g. 18:32
 DATE_FORMAT = "%a %#d %b"  # e.g Sun 16 Aug
 ALT_DATE_FORMAT = "%#d %b %Y"  # 6 Nov 2018
 
-if os.path.exists("/usr/share/fonts"):
-    font_path = "/usr/share/fonts"
+if ON_LINUX:
+    FONT_PATH = "/usr/share/fonts/dejavu/DejaVuSans.ttf"
 else:
-    font_path = ""
-
-FONT_PATH = "f{font_path}/dejavu/DejaVuSans.ttf"
+    FONT_PATH = "/usr/share/fonts/dejavu/arial.ttf"
 
 # rgba
 TEXT_COLOR = (255, 255, 255, 255)  # white
 
-SHOW_GRID = False
-GRID_SIZE = 20
+SHOW_GRID = True
+GRID_SIZE = 60
 TIME_TO_DATE_RATIO = 2
-
-FACE_DETECTION = False
 
 BRISBANE_LAT = -27.4698
 BRISBANE_LON = 153.0251
