@@ -8,10 +8,10 @@ from globals import (
     GRID_SIZE,
     TEXT_COLOR,
     FONT_PATH,
-    DATE_FORMAT,
-    TIME_FORMAT,
+    CURRENT_DATE_FORMAT,
+    CURRENT_TIME_FORMAT,
     SHOW_GRID,
-    ALT_DATE_FORMAT,
+    CREATION_DATE_FORMAT,
     WEATHER_ICONS,
 )
 
@@ -34,9 +34,9 @@ class ImageModification:
         self.grid_cell_width = int(self.img_width / self.grid_size)
         self.grid_cell_height = int(self.img_height / self.grid_size)
 
-        self.current_date_format = DATE_FORMAT
-        self.current_time_format = TIME_FORMAT
-        self.creation_date_format = ALT_DATE_FORMAT
+        self.current_date_format = CURRENT_DATE_FORMAT
+        self.current_time_format = CURRENT_TIME_FORMAT
+        self.creation_date_format = CREATION_DATE_FORMAT
 
         self.general_text_height = self.grid_cell_height * 3
 

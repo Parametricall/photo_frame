@@ -25,24 +25,20 @@ EXCLUDE_DIRS = [
     "Videos_2020"
 ]
 
-TIME_FORMAT = "%H:%M"  # e.g. 18:32
-DATE_FORMAT = "%a %#d %b"  # e.g Sun 16 Aug
-ALT_DATE_FORMAT = "%#d %b %Y"  # 6 Nov 2018
+CURRENT_TIME_FORMAT = "%H:%M"  # e.g. 18:32
+CURRENT_DATE_FORMAT = "%a %#d %b"  # e.g Sun 16 Aug
+CREATION_DATE_FORMAT = "%#d %b %Y"  # 6 Nov 2018
 
 if ON_LINUX:
     FONT_PATH = "/usr/share/fonts/dejavu/DejaVuSans.ttf"
 else:
-    FONT_PATH = "/usr/share/fonts/dejavu/arial.ttf"
+    FONT_PATH = "arial.ttf"
 
 # rgba
 TEXT_COLOR = (255, 255, 255, 255)  # white
 
-SHOW_GRID = True
+SHOW_GRID = False
 GRID_SIZE = 60
-TIME_TO_DATE_RATIO = 2
-
-BRISBANE_LAT = -27.4698
-BRISBANE_LON = 153.0251
 
 DAYBORO_LAT = -27.1962
 DAYBORO_LONG = 152.8243

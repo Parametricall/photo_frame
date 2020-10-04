@@ -1,44 +1,86 @@
+import json
 import os
-import sys
 import random
 import logging
+import sys
 import tkinter as tk
-from PIL import Image, ImageTk
 
-from utilities import (
-    get_path_of_original_images,
-    get_weather_from_online,
-    add_text_to_image,
-)
+import requests
+from PIL import Image, ImageTk
+from requests.adapters import HTTPAdapter
+
+from image_modification import ImageModification
 from globals import (
     SLIDESHOW_DELAY,
     GET_WEATHER_DELAY,
     IMG_DIR,
-    ON_LINUX,
+    ON_LINUX, API_URL_BASE, API_URL, EXCLUDE_DIRS,
 )
+from montage_generator import create_montage
 
-# print(IMG_DIR)
-
-"""
-# Pass slideshow delay from command line ie slideshow.py 5 If nothing passed use default 30secs
-"""
 try:
-    SLIDESHOW_DELAY = int(sys.argv[
-                              1])  # Pass slideshow delay from command line ie slideshow.py 5
+    # Pass slideshow delay from command line i.e. slideshow.py 5
+    # If nothing passed use default 30 secs
+    SLIDESHOW_DELAY = int(sys.argv[1])
 except Exception as e:
     print("SLIDESHOW_DELAY incorrect")
     print(e)
+    logging.warning(e)
 
 try:
-    IMG_DIR = sys.argv[
-        2]  # Pass image directory from command line ie slideshow.py 5 '/images/'
+    # Pass image directory from command line
+    # i.e. slideshow.py 5 /media/usb/images
+    IMG_DIR = sys.argv[2]
 except IndexError as e:
     print("IMG_DIR Incorrect ")
     print(e)
+    logging.warning(e)
 
 
-# if FACE_DETECTION:
-#     from face_detection import static_image_face_detection
+def get_weather_from_online():
+    try:
+        session = requests.Session()
+        session.mount(API_URL_BASE, HTTPAdapter(
+            max_retries=3))
+        response = session.get(API_URL)
+    except requests.exceptions.ConnectionError as error:
+        logging.error(error)
+        return None, None
+
+    if response.status_code == 200:
+        json_res = json.loads(response.content)
+        weather = json_res["hourly"][1]["weather"][0]
+        temp = json_res["hourly"][0]["temp"] - 273
+        temp = "{:2.0f}".format(temp)
+        temp = temp + u"\N{DEGREE SIGN}"
+    else:
+        weather = None
+        temp = None
+
+    return weather, temp
+
+
+def get_path_of_original_images(img_dir=IMG_DIR):
+    files = os.scandir(img_dir)
+
+    images_to_montage = []
+    images = []
+    for file in files:
+        if file.is_dir():
+            if file.name in EXCLUDE_DIRS:
+                pass
+            elif file.name == "montage":
+                output = get_path_of_original_images(file.path)
+                images_to_montage += [output["images"]]
+            else:
+                output = get_path_of_original_images(file.path)
+                images += output["images"]
+                images_to_montage += output["montage"]
+            continue
+        if file.name.endswith((".jpg", ".png", ".MP4")):
+            images.append(f"{img_dir}/{file.name}")
+
+    return {"images": images, "montage": images_to_montage}
 
 
 class Slideshow(tk.Tk):
@@ -87,8 +129,35 @@ class Slideshow(tk.Tk):
 
     def fetch_slideshow_files(self):
         file_paths = get_path_of_original_images(IMG_DIR)
-        random.shuffle(file_paths)
-        self.pictures = iter(file_paths)
+
+        single_images = file_paths["images"]
+        images = [(Image.open(img_path), img_path) for img_path in
+                  single_images]
+
+        for montage in file_paths["montage"]:
+            num_photos = len(montage)
+            num_photos_in_montage = 4
+
+            num_montages = num_photos // num_photos_in_montage
+            extra_montage = num_photos % num_photos_in_montage
+
+            montage_images = []
+            for i in range(num_montages):
+                new_montage = create_montage(
+                    3840, 2160,
+                    montage[(i * num_photos_in_montage):num_photos_in_montage]
+                )
+                montage_images.append((new_montage, ""))
+
+            if extra_montage:
+                extra = create_montage(
+                    3840, 2160, montage[(-1 * num_photos_in_montage):])
+                montage_images.append((extra, ""))
+
+            images += montage_images
+        random.shuffle(images)
+
+        self.pictures = iter(images)
 
     def start_slideshow(self):
         self.get_weather()
@@ -96,33 +165,28 @@ class Slideshow(tk.Tk):
 
     def show_slides(self):
         try:
-            file_path = next(self.pictures)
+            image = next(self.pictures)
         except StopIteration:
             print("STOPPED iteration")
             self.fetch_slideshow_files()
-            file_path = next(self.pictures)
-        if file_path.endswith((".jpg", ".png")):
-            self.show_image(file_path)
-        else:
-            logging.error(f"{file_path} is not a supported file format")
-            self.show_slides()
+            image = next(self.pictures)
 
-    def show_image(self, image_path):
-        original_image = Image.open(image_path)
+        self.show_image(image)
+
+    def show_image(self, image):
+        original_image = image[0]
+        image_path = image[1]
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
 
-        add_text_to_image(resized, image_path, self.weather_icon, self.temp)
+        modified_img = ImageModification(resized, image_path,
+                                         self.weather_icon, self.temp)
+        modified_img.add_info_to_image()
 
-        # if FACE_DETECTION:
-        #     face_image = static_image_face_detection(resized)
-        #     new_img = ImageTk.PhotoImage(Image.fromarray(face_image))
-        # else:
         new_img = ImageTk.PhotoImage(resized)
 
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
-        self.title(os.path.basename(image_path))
         self.after(self.delay, self.show_slides)
 
     # noinspection PyUnusedLocal
@@ -151,3 +215,4 @@ if __name__ == '__main__':
         slideshow.mainloop()
     except BaseException as e:
         logging.exception(e)
+        raise

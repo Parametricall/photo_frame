@@ -99,7 +99,7 @@ class Montage(tk.Tk):
         self.new_montage = None
 
     def create_montage(self):
-        from slideshow_test import get_path_of_original_images
+        from slideshow import get_path_of_original_images
         image_paths = get_path_of_original_images(IMG_DIR)
         random.shuffle(image_paths)
         new_montage = create_montage(3840, 2160, image_paths)
