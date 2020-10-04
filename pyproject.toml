@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "rasb_pi_timelapse"
+name = "photo_frame"
 version = "1.0.0"
 description = "photo frame"
 authors = ["Parametricall <22248105+Parametricall@users.noreply.github.com>"]
