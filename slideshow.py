@@ -23,7 +23,7 @@ try:
     # If nothing passed use default 30 secs
     SLIDESHOW_DELAY = int(sys.argv[1])
 except Exception as e:
-    print("SLIDESHOW_DELAY incorrect")
+    print(f"Using default delay {SLIDESHOW_DELAY}")
     print(e)
     # logging.warning(e)
 
@@ -32,7 +32,7 @@ try:
     # i.e. slideshow.py 5 /media/usb/images
     IMG_DIR = sys.argv[2]
 except IndexError as e:
-    print("IMG_DIR Incorrect ")
+    print(f"Using default image directory {IMG_DIR} ")
     print(e)
     # logging.warning(e)
 
