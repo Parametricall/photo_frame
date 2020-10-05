@@ -14,6 +14,7 @@ from globals import (
     CREATION_DATE_FORMAT,
     WEATHER_ICONS,
 )
+from quickstart import get_next_batch_of_events
 
 
 class ImageModification:
@@ -66,6 +67,8 @@ class ImageModification:
         self.add_img_location()
         weather_x = self.add_weather(current_date_x)
         self.add_temperature(weather_x)
+
+        self.add_next_calendar_event()
 
     def calculate_base_font_size(self):
         sample_text = "Hello World 0158"
@@ -256,6 +259,33 @@ class ImageModification:
             self.temp,
             fill=TEXT_COLOR,
             font=self.base_font,
+            stroke_width=self.stroke_width,
+            stroke_fill=self.stroke_color,
+        )
+
+    def add_next_calendar_event(self):
+        events = get_next_batch_of_events()
+        next_event = events[0]
+
+        start_time = next_event["start"]["dateTime"]
+        datetime_obj = datetime.fromisoformat(start_time)
+        clean_start_time = datetime_obj.strftime(self.current_date_format)
+
+        summary = next_event["summary"]
+
+        string = f"{clean_start_time}: {summary}"
+
+        font = self.get_font(int(self.base_font_size / 2))
+        width, _ = self.get_text_size(string, font)
+
+        x = self.right_border - width
+        y = self.top_border
+
+        self.draw.text(
+            (x, y),
+            string,
+            fill=TEXT_COLOR,
+            font=font,
             stroke_width=self.stroke_width,
             stroke_fill=self.stroke_color,
         )
