@@ -162,6 +162,7 @@ class Slideshow(tk.Tk):
         self.pictures = iter(images)
 
     def start_slideshow(self):
+        logging.info("starting slideshow")
         self.get_weather()
         self.show_slides()
 
@@ -191,6 +192,7 @@ class Slideshow(tk.Tk):
 
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
+        logging.info("Wait for slideshow delay")
         self.after(self.delay, self.show_slides)
 
     # noinspection PyUnusedLocal
@@ -215,7 +217,7 @@ if __name__ == '__main__':
     try:
         logging.info("Calling tkInter")
         slideshow = Slideshow()
-        logging.info("Start slideshow")
+
         slideshow.start_slideshow()
         logging.info("tkInter Main loop")
         slideshow.mainloop()
