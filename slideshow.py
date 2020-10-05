@@ -108,6 +108,7 @@ class Slideshow(tk.Tk):
         self.temp = None
 
         self.delay = (SLIDESHOW_DELAY * 1000)
+        logging.info("TKInter initialised")
 
     def get_weather(self):
         """
@@ -128,6 +129,7 @@ class Slideshow(tk.Tk):
             self.temp = ""
 
     def fetch_slideshow_files(self):
+        logging.info("Building file list")
         file_paths = get_path_of_original_images(IMG_DIR)
 
         single_images = file_paths["images"]
@@ -164,6 +166,7 @@ class Slideshow(tk.Tk):
         self.show_slides()
 
     def show_slides(self):
+        logging.info("fetching next slideshow image")
         try:
             image = next(self.pictures)
         except StopIteration:
@@ -174,6 +177,7 @@ class Slideshow(tk.Tk):
         self.show_image(image)
 
     def show_image(self, image):
+        logging.info("Displaying image")
         original_image = image[0]
         image_path = image[1]
         resized = original_image.resize(
@@ -209,9 +213,11 @@ if __name__ == '__main__':
             logging.info("Setting environment variable: DISPLAY = :0")
 
     try:
-        logging.info("Starting slideshow")
+        logging.info("Calling tkInter")
         slideshow = Slideshow()
+        logging.info("Start slideshow")
         slideshow.start_slideshow()
+        logging.info("tkInter Main loop")
         slideshow.mainloop()
     except BaseException as e:
         logging.exception(e)
