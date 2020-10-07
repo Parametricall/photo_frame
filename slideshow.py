@@ -89,7 +89,7 @@ class Slideshow(tk.Tk):
 
             images += montage_images
         random.shuffle(images)
-
+        logging.info(f"Number of images {len(images)}")
         self.pictures = iter(images)
 
     def start_slideshow(self):
@@ -101,7 +101,7 @@ class Slideshow(tk.Tk):
         try:
             file_path = next(self.pictures)
         except StopIteration:
-            print("STOPPED iteration")
+            logging.info("STOPPED iteration")
             self.fetch_slideshow_files()
             file_path = next(self.pictures)
 
@@ -109,20 +109,23 @@ class Slideshow(tk.Tk):
 
     def show_image(self, image_path):
         # original_image = Image.open(image_path)
-        logging.info(f"Display image: {image_path['filename']}")
+        logging.info(f"Display image: {image_path.filename}")
         original_image = image_path
+        logging.info("About to resize image")
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
-
+        logging.info("Image resized")
         add_text_to_image(resized, image_path, self.weather_icon)
+        logging.info("Added text overlay to image")
 
         if FACE_DETECTION:
             face_image = static_image_face_detection(resized)
             new_img = ImageTk.PhotoImage(Image.fromarray(face_image))
         else:
             new_img = ImageTk.PhotoImage(resized)
-
+        logging.info("Got Tk photo image")
         self.picture_display.config(image=new_img)
+        logging.info("Set Display config")
         self.picture_display.image = new_img
         # self.title(os.path.basename(image_path))
         logging.info("Waiting for delay")
