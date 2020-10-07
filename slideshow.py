@@ -45,6 +45,7 @@ class Slideshow(tk.Tk):
         self.weather_icon = None
 
         self.delay = (SLIDESHOW_DELAY * 1000)
+        logging.info("TKInter initialised")
 
     def get_weather(self):
         """
@@ -53,7 +54,7 @@ class Slideshow(tk.Tk):
         slideshow.  If the weather cannot be fetched, then it will retry
         after 30 seconds.
         """
-        logging.info("fetching weather")
+        logging.info("Fetching weather")
         self.weather = get_weather_from_online()
         if self.weather is None:
             logging.warning("Failed to get weather, retrying in 30 seconds")
@@ -96,6 +97,7 @@ class Slideshow(tk.Tk):
         self.show_slides()
 
     def show_slides(self):
+        logging.info("Getting next image")
         try:
             file_path = next(self.pictures)
         except StopIteration:
@@ -107,6 +109,7 @@ class Slideshow(tk.Tk):
 
     def show_image(self, image_path):
         # original_image = Image.open(image_path)
+        logging.info(f"Display image: {image_path['filename']}")
         original_image = image_path
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
@@ -122,6 +125,7 @@ class Slideshow(tk.Tk):
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
         # self.title(os.path.basename(image_path))
+        logging.info("Waiting for delay")
         self.after(self.delay, self.show_slides)
 
     # noinspection PyUnusedLocal
@@ -144,9 +148,10 @@ if __name__ == '__main__':
             logging.info("Setting environment variable: DISPLAY = :0")
 
     try:
-        logging.info("Starting slideshow")
+        logging.info("Starting")
         slideshow = Slideshow()
         slideshow.start_slideshow()
+        logging.info("Main loop")
         slideshow.mainloop()
     except BaseException as e:
         logging.exception(e)
