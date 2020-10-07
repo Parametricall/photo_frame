@@ -171,14 +171,17 @@ class Slideshow(tk.Tk):
         try:
             image = next(self.pictures)
         except StopIteration:
-            print("STOPPED iteration")
+            logging.info("STOPPED iteration")
             self.fetch_slideshow_files()
             image = next(self.pictures)
+        except BaseException as e:
+            logging.error(e)
+            print(e)
 
         self.show_image(image)
 
     def show_image(self, image):
-        logging.info("Displaying image")
+        logging.info(f"Displaying image: {image[1]}")
         original_image = image[0]
         image_path = image[1]
         resized = original_image.resize(
@@ -198,6 +201,7 @@ class Slideshow(tk.Tk):
     # noinspection PyUnusedLocal
     def close(self, event=None):
         self.destroy()
+
 
 
 if __name__ == '__main__':
