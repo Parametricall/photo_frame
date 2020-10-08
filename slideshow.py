@@ -1,11 +1,11 @@
-import json
 import os
+import sys
+import requests
+import json
 import random
 import logging
-import sys
-import tkinter as tk
 
-import requests
+import tkinter as tk
 from PIL import Image, ImageTk
 from requests.adapters import HTTPAdapter
 
@@ -16,25 +16,6 @@ from globals import (
     IMG_DIR,
     ON_LINUX, API_URL_BASE, API_URL, EXCLUDE_DIRS,
 )
-from montage_generator import create_montage
-
-try:
-    # Pass slideshow delay from command line i.e. slideshow.py 5
-    # If nothing passed use default 30 secs
-    SLIDESHOW_DELAY = int(sys.argv[1])
-except Exception as e:
-    print(f"Using default delay {SLIDESHOW_DELAY}")
-    print(e)
-    # logging.warning(e)
-
-try:
-    # Pass image directory from command line
-    # i.e. slideshow.py 5 /media/usb/images
-    IMG_DIR = sys.argv[2]
-except IndexError as e:
-    print(f"Using default image directory {IMG_DIR} ")
-    print(e)
-    # logging.warning(e)
 
 
 def get_weather_from_online():
@@ -62,31 +43,25 @@ def get_weather_from_online():
 
 def get_path_of_original_images(img_dir=IMG_DIR):
     files = os.scandir(img_dir)
-
-    images_to_montage = []
     images = []
     for file in files:
         if file.is_dir():
             if file.name in EXCLUDE_DIRS:
                 pass
-            elif file.name == "montage":
-                output = get_path_of_original_images(file.path)
-                images_to_montage += [output["images"]]
             else:
                 output = get_path_of_original_images(file.path)
-                images += output["images"]
-                images_to_montage += output["montage"]
+                images += output
             continue
         if file.name.endswith((".jpg", ".png", ".MP4")):
             images.append(f"{img_dir}/{file.name}")
 
-    return {"images": images, "montage": images_to_montage}
+    return images
 
 
 class Slideshow(tk.Tk):
     def __init__(self):
         # Setup main window
-        tk.Tk.__init__(self)
+        super().__init__()
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
         self.overrideredirect(True)
@@ -100,7 +75,8 @@ class Slideshow(tk.Tk):
 
         # Extras
         self.pictures = None
-        self.picture_index = None
+        self.picture_index = 0
+        self.number_of_images = None
         self.fetch_slideshow_files()
 
         self.weather = None
@@ -108,7 +84,6 @@ class Slideshow(tk.Tk):
         self.temp = None
 
         self.delay = (SLIDESHOW_DELAY * 1000)
-        logging.info("TKInter initialised")
 
     def get_weather(self):
         """
@@ -130,60 +105,35 @@ class Slideshow(tk.Tk):
 
     def fetch_slideshow_files(self):
         logging.info("Building file list")
-        file_paths = get_path_of_original_images(IMG_DIR)
-
-        single_images = file_paths["images"]
-        images = [(Image.open(img_path), img_path) for img_path in
-                  single_images]
-
-        for montage in file_paths["montage"]:
-            num_photos = len(montage)
-            num_photos_in_montage = 4
-
-            num_montages = num_photos // num_photos_in_montage
-            extra_montage = num_photos % num_photos_in_montage
-
-            montage_images = []
-            for i in range(num_montages):
-                new_montage = create_montage(
-                    3840, 2160,
-                    montage[(i * num_photos_in_montage):num_photos_in_montage]
-                )
-                montage_images.append((new_montage, ""))
-
-            if extra_montage:
-                extra = create_montage(
-                    3840, 2160, montage[(-1 * num_photos_in_montage):])
-                montage_images.append((extra, ""))
-
-            images += montage_images
-        random.shuffle(images)
-
-        self.pictures = iter(images)
+        image_paths = get_path_of_original_images(IMG_DIR)
+        self.number_of_images = len(image_paths)
+        logging.info(f"Found: {len(image_paths)} images")
+        random.shuffle(image_paths)
+        self.pictures = image_paths
 
     def start_slideshow(self):
-        logging.info("starting slideshow")
         self.get_weather()
         self.show_slides()
 
     def show_slides(self):
-        logging.info("fetching next slideshow image")
-        try:
-            image = next(self.pictures)
-        except StopIteration:
-            logging.info("STOPPED iteration")
-            self.fetch_slideshow_files()
-            image = next(self.pictures)
-        except BaseException as e:
-            logging.error(e)
-            print(e)
+        if self.number_of_images is not None:
+            if self.picture_index < self.number_of_images:
+                logging.info(f"fetching image {self.picture_index + 1}")
+                image_path = self.pictures[self.picture_index]
+                self.picture_index += 1
+            else:
+                logging.info("End of image path array")
+                self.fetch_slideshow_files()
+                logging.info(f"fetching image 0")
+                image_path = self.pictures[0]
+                self.picture_index = 1
+        else:
+            raise NotImplementedError("number of images is still None")
 
-        self.show_image(image)
+        self.show_image(image_path)
 
-    def show_image(self, image):
-        logging.info(f"Displaying image: {image[1]}")
-        original_image = image[0]
-        image_path = image[1]
+    def show_image(self, image_path):
+        original_image = Image.open(image_path)
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
 
@@ -195,13 +145,11 @@ class Slideshow(tk.Tk):
 
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
-        logging.info("Wait for slideshow delay")
         self.after(self.delay, self.show_slides)
 
     # noinspection PyUnusedLocal
     def close(self, event=None):
         self.destroy()
-
 
 
 if __name__ == '__main__':
@@ -213,17 +161,30 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S',
     )
 
+    # Pass slideshow delay from command line i.e. slideshow.py 5
+    # If nothing passed use default 30 secs
+    try:
+        SLIDESHOW_DELAY = int(sys.argv[1])
+    except IndexError:
+        logging.info(f"Using default delay {SLIDESHOW_DELAY}")
+
+    # Pass image directory from command line
+    # i.e. slideshow.py 5 /media/usb/images
+    try:
+        IMG_DIR = sys.argv[2]
+    except IndexError:
+        logging.info(f"Using default image directory {IMG_DIR} ")
+
     if ON_LINUX:
         if os.environ.get("DISPLAY", None) is None:
             os.environ["DISPLAY"] = ":0"
             logging.info("Setting environment variable: DISPLAY = :0")
 
     try:
-        logging.info("Calling tkInter")
+        logging.info("Initializing Slideshow")
         slideshow = Slideshow()
-
+        logging.info("Starting slideshow")
         slideshow.start_slideshow()
-        logging.info("tkInter Main loop")
         slideshow.mainloop()
     except BaseException as e:
         logging.exception(e)

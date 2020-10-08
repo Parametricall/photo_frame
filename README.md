@@ -13,3 +13,24 @@ randomly loads an image, applys the time, date, and location, then outputs to a
 "display_photo/output.jpg" file.  "feh" then reads in this file and displays it, and 
 reloads the image every x seconds.  Within the x seconds, python has loaded a new image 
 so the image on the TV changes every x seconds.
+
+
+Track memory Leaks
+==================
+
+Due to a memory issue, we came across a helpful library to track memory usage for
+specific functions. Using as per the example below, the memory statistics will be 
+printed to the console.
+
+```
+    from memory_profiler import profile
+
+    @profile
+    def some_function():
+        pass
+```
+
+https://github.com/pythonprofilers/memory_profiler 
+
+
+
