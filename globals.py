@@ -9,7 +9,7 @@ import os
 # delay in seconds
 SLIDESHOW_DELAY = 30
 
-LOG_LEVEL = "INFO"
+LOG_LEVEL = "WARNING"
 INSANE_LOGGER = False
 
 # delay in seconds
