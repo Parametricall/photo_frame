@@ -29,7 +29,7 @@ def setup_logger():
             "console": {
                 "level": "DEBUG",
                 "class": "logging.StreamHandler",
-                "formatter": "verbose",
+                "formatter": "simple",
             },
             "null": {
                 "class": "logging.NullHandler",

@@ -52,7 +52,7 @@ def get_path_of_original_images(img_dir=globals.IMG_DIR):
             else:
                 output = get_path_of_original_images(file.path)
                 images += output
-        if file.name.endswith((".jpg", ".png")):
+        elif file.name.endswith((".jpg", ".png")):
             images.append(f"{img_dir}/{file.name}")
         else:
             logger.warning(f"Not supported file format: {file.path}")
@@ -64,7 +64,6 @@ class Slideshow(tk.Tk):
     def __init__(self):
         # Setup main window
         super().__init__()
-        logger.debug("starting:")
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
         self.overrideredirect(True)

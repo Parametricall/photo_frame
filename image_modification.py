@@ -198,6 +198,9 @@ class ImageModification:
                 creation_date.reverse()
                 cre_date = "/".join(creation_date)
                 date_obj = datetime.strptime(cre_date, "%d/%m/%Y")
+            except KeyError:
+                logger.warning(f"img has not creation time: {self.img_path}")
+                return
 
             formatted_date = date_obj.strftime(self.creation_date_format)
         except BaseException as e:
