@@ -254,14 +254,22 @@ class ImageModification:
 
         # Add weather icon to image
         weather_icon = WEATHER_ICONS.get(self.weather_icon, None)
-        if self.grid_cell_width < 35:
+        minimum_icon_height = self.general_text_height * 2
+
+        if minimum_icon_height < 32:
+            icon_path = f"./icons/32px/{weather_icon}.png"
+        elif minimum_icon_height < 64:
+            icon_path = f"./icons/64px/{weather_icon}.png"
+        elif minimum_icon_height < 128:
             icon_path = f"./icons/128px/{weather_icon}.png"
+        elif minimum_icon_height < 256:
+            icon_path = f"./icons/256px/{weather_icon}.png"
         else:
-            icon_path = f"./icons/128px/{weather_icon}.png"
+            icon_path = f"./icons/512px/{weather_icon}.png"
         icon_img = Image.open(icon_path)
         icon_width, icon_height = icon_img.size
 
-        x = current_date_x - (self.grid_cell_width * 2) - icon_width
+        x = current_date_x - self.grid_cell_width - icon_width
         y = self.bottom_border - icon_height
 
         self.img.paste(icon_img, box=(x, y), mask=icon_img)

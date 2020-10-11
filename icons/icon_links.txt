@@ -1,0 +1,8 @@
+clear_day = https://www.flaticon.com/free-icon/sun_146199?term=sun&page=1&position=61
+clear_night = https://www.flaticon.com/free-icon/moon_740878?term=moon&page=2&position=43
+few_clouds_day = https://www.flaticon.com/free-icon/cloudy_1146808
+few_clouds_night = https://www.flaticon.com/free-icon/night_3026353
+thunderstorm = https://www.flaticon.com/free-icon/storm_3026385
+rain = https://www.flaticon.com/free-icon/rain_3026267
+cloudy = https://www.flaticon.com/free-icon/cloudy_286580
+mist = https://www.flaticon.com/free-icon/haze_727890?term=mist&page=1&position=69
