@@ -1,9 +1,18 @@
 import logging.config
-
+import os
 import globals
+import time
 
 
 def setup_logger():
+    log_path = os.path.join(os.getcwd(), "temp")
+
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+
+    log_file_name = f"log_{time.strftime('%Y-%m-%d_%H%M')}.txt"
+    log_file_path = os.path.join(log_path, log_file_name)
+
     logging_dict = {
         "version": 1,
         "disable_existing_loggers": True,
@@ -23,8 +32,9 @@ def setup_logger():
             "file": {
                 "level": "DEBUG",
                 "class": "logging.FileHandler",
-                "filename": "logging.out",
+                "filename": log_file_path,
                 "formatter": "verbose",
+                "mode": "w",
             },
             "console": {
                 "level": "DEBUG",
