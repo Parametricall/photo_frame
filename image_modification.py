@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 from datetime import date, datetime
 
 from PIL import ImageDraw, ImageFont, Image
@@ -15,12 +16,16 @@ from globals import (
     WEATHER_ICONS,
 )
 
+logger = logging.getLogger(__name__)
+insane_logger = logging.getLogger("insane_logger")
+
 
 class ImageModification:
     def __init__(
             self, img, image_path, weather_icon,
             temp
     ):
+        logger.debug("Initializing ImageModification")
         self.img = img
         self.img_path = image_path
         self.img_width, self.img_height = img.size
@@ -55,6 +60,15 @@ class ImageModification:
         self.stroke_color = "black"
         self.stroke_width = 3
 
+        insane_logger.debug(f"image path: {self.img_path}")
+        insane_logger.debug(f"image (width, height): ({self.img_width}, "
+                            f"{self.img_height})")
+        insane_logger.debug(f"weather icon: {self.weather_icon}")
+        insane_logger.debug(f"temperature: {self.temp}")
+        insane_logger.debug(
+            f"grid cell (width, height): ({self.grid_cell_width}, "
+            f"{self.grid_cell_height})")
+
     def add_info_to_image(self):
         if self.show_grid:
             self.add_grid()
@@ -68,6 +82,7 @@ class ImageModification:
         self.add_temperature(weather_x)
 
     def calculate_base_font_size(self):
+        logger.debug("calculating base font size")
         sample_text = "Hello World 0158"
         font_size = 1
         font = self.get_font(font_size=font_size)
@@ -87,6 +102,7 @@ class ImageModification:
         return ImageFont.truetype(self.font_path, font_size)
 
     def add_grid(self):
+        logger.debug("Creating grid")
         for i in range(1, self.grid_size + 1):
             self.draw.line(
                 [
@@ -106,6 +122,7 @@ class ImageModification:
             )
 
     def add_current_date(self):
+        logger.debug("adding current date")
         current_date = date.today().strftime(self.current_date_format)
         width, height = self.get_text_size(current_date, self.base_font)
         x = self.right_border - width
@@ -123,6 +140,7 @@ class ImageModification:
         return x
 
     def add_current_time(self):
+        logger.debug("adding current time")
         current_time = time.strftime(self.current_time_format)
 
         font = self.get_font(self.base_font_size * 2)
@@ -139,6 +157,7 @@ class ImageModification:
         )
 
     def add_img_title(self):
+        logger.debug("adding img title")
         exif = self.img.getexif()
         img_title = (exif.get(270, "").strip())
 
@@ -158,6 +177,7 @@ class ImageModification:
         )
 
     def add_img_creation_date(self):
+        logger.debug("adding image creation date")
         exif = self.img.getexif()
         creation_time = exif.get(36867)
 
@@ -171,6 +191,8 @@ class ImageModification:
                     "%a %d %b %Y %H:%M:%S %z"
                 )
             except ValueError:
+                logger.info(
+                    f"creation date is not in expect place: {self.img_path}")
                 creation_date = creation_time.split(" ")[0]
                 creation_date = creation_date.split(":")
                 creation_date.reverse()
@@ -178,7 +200,9 @@ class ImageModification:
                 date_obj = datetime.strptime(cre_date, "%d/%m/%Y")
 
             formatted_date = date_obj.strftime(self.creation_date_format)
-        except BaseException:
+        except BaseException as e:
+            logger.warning(f"Could not get creation date for: {self.img_path}")
+            logger.exception(e)
             return
 
         x = self.left_border
@@ -194,9 +218,7 @@ class ImageModification:
         )
 
     def add_img_location(self):
-        if self.img_path is None:
-            return
-
+        logger.debug("adding img location")
         path = os.path.dirname(self.img_path)
         location = os.path.basename(path)
 
@@ -205,7 +227,7 @@ class ImageModification:
         for word in split_location:
             try:
                 int(word)
-            except:
+            except ValueError:
                 clean_words.append(word)
 
         clean_location = " ".join(clean_words)
@@ -223,6 +245,7 @@ class ImageModification:
         )
 
     def add_weather(self, current_date_x):
+        logger.debug("adding weather")
         if self.weather_icon is None:
             return
 
@@ -243,6 +266,7 @@ class ImageModification:
         return x
 
     def add_temperature(self, weather_x):
+        logger.debug("adding temperature")
         if self.temp is None or weather_x is None:
             return
 

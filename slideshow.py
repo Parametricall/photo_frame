@@ -1,5 +1,4 @@
 import os
-import sys
 import requests
 import json
 import random
@@ -11,11 +10,12 @@ from requests.adapters import HTTPAdapter
 
 from image_modification import ImageModification
 from globals import (
-    SLIDESHOW_DELAY,
     GET_WEATHER_DELAY,
-    IMG_DIR,
-    ON_LINUX, API_URL_BASE, API_URL, EXCLUDE_DIRS,
+    API_URL_BASE, API_URL, EXCLUDE_DIRS,
 )
+import globals
+
+logger = logging.getLogger(__name__)
 
 
 def get_weather_from_online():
@@ -24,24 +24,25 @@ def get_weather_from_online():
         session.mount(API_URL_BASE, HTTPAdapter(
             max_retries=3))
         response = session.get(API_URL)
-    except requests.exceptions.ConnectionError as error:
-        logging.error(error)
-        return None, None
 
-    if response.status_code == 200:
-        json_res = json.loads(response.content)
-        weather = json_res["hourly"][1]["weather"][0]
-        temp = json_res["hourly"][0]["temp"] - 273
-        temp = "{:2.0f}".format(temp)
-        temp = temp + u"\N{DEGREE SIGN}"
-    else:
-        weather = None
-        temp = None
+        if response.status_code == 200:
+            json_res = json.loads(response.content)
+            weather = json_res["hourly"][1]["weather"][0]
+            temp = json_res["hourly"][0]["temp"] - 273
+            temp = "{:2.0f}".format(temp)
+            temp = temp + u"\N{DEGREE SIGN}"
+        else:
+            logger.warning(f"Weather API response did not return 200 "
+                           f"instead: {response.status_code}")
+            weather, temp = None, None
+    except requests.exceptions.ConnectionError as error:
+        logger.error(error)
+        weather, temp = None, None
 
     return weather, temp
 
 
-def get_path_of_original_images(img_dir=IMG_DIR):
+def get_path_of_original_images(img_dir=globals.IMG_DIR):
     files = os.scandir(img_dir)
     images = []
     for file in files:
@@ -51,9 +52,10 @@ def get_path_of_original_images(img_dir=IMG_DIR):
             else:
                 output = get_path_of_original_images(file.path)
                 images += output
-            continue
-        if file.name.endswith((".jpg", ".png", ".MP4")):
+        if file.name.endswith((".jpg", ".png")):
             images.append(f"{img_dir}/{file.name}")
+        else:
+            logger.warning(f"Not supported file format: {file.path}")
 
     return images
 
@@ -62,6 +64,7 @@ class Slideshow(tk.Tk):
     def __init__(self):
         # Setup main window
         super().__init__()
+        logger.debug("starting:")
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
         self.overrideredirect(True)
@@ -83,7 +86,7 @@ class Slideshow(tk.Tk):
         self.weather_icon = None
         self.temp = None
 
-        self.delay = (SLIDESHOW_DELAY * 1000)
+        self.delay = (globals.SLIDESHOW_DELAY * 1000)
 
     def get_weather(self):
         """
@@ -92,10 +95,10 @@ class Slideshow(tk.Tk):
         slideshow.  If the weather cannot be fetched, then it will retry
         after 30 seconds.
         """
-        logging.info("fetching weather")
+        logger.info("fetching weather")
         self.weather, self.temp = get_weather_from_online()
         if self.weather is None:
-            logging.warning("Failed to get weather, retrying in 30 seconds")
+            logger.warning("Failed to get weather, retrying in 30 seconds")
             self.after((30 * 1000), self.get_weather)
         else:
             self.weather_icon = self.weather["icon"]
@@ -104,28 +107,31 @@ class Slideshow(tk.Tk):
             self.temp = ""
 
     def fetch_slideshow_files(self):
-        logging.info("Building file list")
-        image_paths = get_path_of_original_images(IMG_DIR)
+        logger.info("Building file list")
+        image_paths = get_path_of_original_images(globals.IMG_DIR)
         self.number_of_images = len(image_paths)
-        logging.info(f"Found: {len(image_paths)} images")
+        logger.info(f"Found: {self.number_of_images} images")
         random.shuffle(image_paths)
         self.pictures = image_paths
 
     def start_slideshow(self):
+        logger.info("Starting Slideshow")
         self.get_weather()
         self.show_slides()
 
     def show_slides(self):
         if self.number_of_images is not None:
             if self.picture_index < self.number_of_images:
-                logging.info(f"fetching image {self.picture_index + 1}")
                 image_path = self.pictures[self.picture_index]
+                logger.info(
+                    f"fetching image {self.picture_index + 1}: {image_path}"
+                )
                 self.picture_index += 1
             else:
-                logging.info("End of image path array")
+                logger.info("End of image path array")
                 self.fetch_slideshow_files()
-                logging.info(f"fetching image 0")
                 image_path = self.pictures[0]
+                logger.info(f"fetching image 1: {image_path}")
                 self.picture_index = 1
         else:
             raise NotImplementedError("number of images is still None")
@@ -133,16 +139,19 @@ class Slideshow(tk.Tk):
         self.show_image(image_path)
 
     def show_image(self, image_path):
+        logger.debug("Opening image")
         original_image = Image.open(image_path)
         resized = original_image.resize(
             (self.screen_width, self.screen_height), Image.ANTIALIAS)
 
+        logger.debug("Getting ready to modify image with data")
         modified_img = ImageModification(resized, image_path,
                                          self.weather_icon, self.temp)
         modified_img.add_info_to_image()
 
         new_img = ImageTk.PhotoImage(resized)
 
+        logger.debug("Pushing image to display")
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
         self.after(self.delay, self.show_slides)
@@ -150,42 +159,3 @@ class Slideshow(tk.Tk):
     # noinspection PyUnusedLocal
     def close(self, event=None):
         self.destroy()
-
-
-if __name__ == '__main__':
-    LOG_FILENAME = 'logging.out'
-    logging.basicConfig(
-        filename=LOG_FILENAME,
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-    )
-
-    # Pass slideshow delay from command line i.e. slideshow.py 5
-    # If nothing passed use default 30 secs
-    try:
-        SLIDESHOW_DELAY = int(sys.argv[1])
-    except IndexError:
-        logging.info(f"Using default delay {SLIDESHOW_DELAY}")
-
-    # Pass image directory from command line
-    # i.e. slideshow.py 5 /media/usb/images
-    try:
-        IMG_DIR = sys.argv[2]
-    except IndexError:
-        logging.info(f"Using default image directory {IMG_DIR} ")
-
-    if ON_LINUX:
-        if os.environ.get("DISPLAY", None) is None:
-            os.environ["DISPLAY"] = ":0"
-            logging.info("Setting environment variable: DISPLAY = :0")
-
-    try:
-        logging.info("Initializing Slideshow")
-        slideshow = Slideshow()
-        logging.info("Starting slideshow")
-        slideshow.start_slideshow()
-        slideshow.mainloop()
-    except BaseException as e:
-        logging.exception(e)
-        raise

@@ -9,6 +9,9 @@ import os
 # delay in seconds
 SLIDESHOW_DELAY = 30
 
+LOG_LEVEL = "INFO"
+INSANE_LOGGER = False
+
 # delay in seconds
 GET_WEATHER_DELAY = 1 * 3600  # 1 hours
 
