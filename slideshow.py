@@ -177,18 +177,18 @@ class Slideshow(tk.Tk):
 
         logger.info("Setting up video")
 
-        if ON_LINUX:
-            self.vlc_player.set_xwindow(self.video_panel.winfo_id())
-        else:
-            self.vlc_player.set_hwnd(self.video_panel.winfo_id())
+        #if ON_LINUX:
+            #self.vlc_player.set_xwindow(self.video_panel.winfo_id())
+        #else:
+            #self.vlc_player.set_hwnd(self.video_panel.winfo_id())
 
         media = self.vlc_instance.media_new(video_path)  # media instance
         self.vlc_player.set_media(media)  # set media used by media player
         # self.player.set_fullscreen(True)
 
         logger.debug("Starting video")
-        self.vlc_player.play()
-
+        #self.vlc_player.play()
+        os.system(f'cvlc -f {video_path}')
         while not self.vlc_player.is_playing():
             pass
 
