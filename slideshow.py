@@ -3,7 +3,6 @@ import requests
 import json
 import random
 import logging
-import sys
 import vlc
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -12,7 +11,7 @@ from requests.adapters import HTTPAdapter
 from image_modification import ImageModification
 from globals import (
     GET_WEATHER_DELAY,
-    API_URL_BASE, API_URL, EXCLUDE_DIRS,
+    API_URL_BASE, API_URL, EXCLUDE_DIRS, ON_LINUX
 )
 import globals
 
@@ -176,6 +175,8 @@ class Slideshow(tk.Tk):
         self.video_panel.pack(fill=tk.BOTH, expand=True)
         self.vlc_player.stop()
 
+        logger.info("Setting up video")
+
         if ON_LINUX:
             self.vlc_player.set_xwindow(self.video_panel.winfo_id())
         else:
@@ -185,6 +186,7 @@ class Slideshow(tk.Tk):
         self.vlc_player.set_media(media)  # set media used by media player
         # self.player.set_fullscreen(True)
 
+        logger.debug("Starting video")
         self.vlc_player.play()
 
         while not self.vlc_player.is_playing():
