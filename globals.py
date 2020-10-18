@@ -13,7 +13,7 @@ LOG_LEVEL = "WARNING"
 INSANE_LOGGER = False
 
 # delay in seconds
-GET_WEATHER_DELAY = 1 * 3600  # 1 hours
+GET_WEATHER_DELAY = 1 * 1800  # 1/2 hour
 
 os_name = os.name
 ON_LINUX = os_name == "posix"

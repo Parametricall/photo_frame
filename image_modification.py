@@ -262,6 +262,8 @@ class ImageModification:
             icon_path = f"./icons/64px/{weather_icon}.png"
         elif minimum_icon_height < 128:
             icon_path = f"./icons/128px/{weather_icon}.png"
+        elif minimum_icon_height < 220: #altered to use 192px icons, height was 216px
+            icon_path = f"./icons/192px/{weather_icon}.png"
         elif minimum_icon_height < 256:
             icon_path = f"./icons/256px/{weather_icon}.png"
         else:
