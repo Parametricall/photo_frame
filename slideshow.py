@@ -3,8 +3,11 @@ import requests
 import json
 import random
 import logging
-import vlc
+#import vlc
 import tkinter as tk
+#import subprocess
+import math
+from pymediainfo import MediaInfo
 from PIL import Image, ImageTk
 from requests.adapters import HTTPAdapter
 
@@ -78,8 +81,8 @@ class Slideshow(tk.Tk):
         self.video_panel = tk.Frame(self)
 
         # Initialise vlc player
-        self.vlc_instance = vlc.Instance()
-        self.vlc_player = self.vlc_instance.media_player_new()
+        #self.vlc_instance = vlc.Instance()
+        #self.vlc_player = self.vlc_instance.media_player_new()
 
         # Extras
         self.pictures = None
@@ -147,10 +150,10 @@ class Slideshow(tk.Tk):
         elif image_path.endswith((".MP4", ".mp4")):
             self.play_video(image_path)
         else:
-            raise NotImplementedError("We shouldn never reach here")
+            raise NotImplementedError("We shouldn't ever reach here")
 
     def show_image(self, image_path):
-        self.video_panel.pack_forget()
+        #self.video_panel.pack_forget()
         self.picture_display.pack(expand=True, fill="both")
 
         logger.debug("Opening image")
@@ -171,9 +174,12 @@ class Slideshow(tk.Tk):
         self.after(self.delay, self.show_slides)
 
     def play_video(self, video_path):
-        self.picture_display.pack_forget()
-        self.video_panel.pack(fill=tk.BOTH, expand=True)
-        self.vlc_player.stop()
+        #self.picture_display.pack_forget()
+        #$self.vlc_instance = vlc.Instance()
+        #self.vlc_player = self.vlc_instance.media_player_new()
+        
+        #self.video_panel.pack(fill=tk.BOTH, expand=True)
+        #self.vlc_player.stop()
 
         logger.info("Setting up video")
 
@@ -182,18 +188,30 @@ class Slideshow(tk.Tk):
         #else:
             #self.vlc_player.set_hwnd(self.video_panel.winfo_id())
 
-        media = self.vlc_instance.media_new(video_path)  # media instance
-        self.vlc_player.set_media(media)  # set media used by media player
+        #media = self.vlc_instance.media_new(video_path)  # media instance
+        #video_length = media.get_length()        
+#self.vlc_player.set_media(media)  # set media used by media player
         # self.player.set_fullscreen(True)
 
         logger.debug("Starting video")
         #self.vlc_player.play()
-        os.system(f'cvlc -f {video_path}')
-        while not self.vlc_player.is_playing():
-            pass
+        process = os.system(f'cvlc -f --play-and-exit --no-audio {video_path}')
+       
+       #while not self.vlc_player.is_playing():
+         #   pass
 
         self.title(os.path.basename(video_path))
-        self.after(self.vlc_player.get_length(), self.show_slides)
+        #self.after(self.vlc_player.get_length(), self.show_slides)
+        media_info=MediaInfo.parse(video_path)
+        print("getting media length")
+        video_length = media_info.tracks[0].duration
+        logger.debug(f"Video length = {video_length}")
+        video_length = video_length + 500
+        video_length = int(math.ceil(video_length/1000)) #get video length add 250ms and make an inreger rounded up.
+        self.after(video_length, self.show_slides)
+
+        #self.vlc_instance = None         
+
 
     # noinspection PyUnusedLocal
     def close(self, event=None):
