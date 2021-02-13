@@ -3,15 +3,18 @@ import requests
 import json
 import random
 import logging
-
+# import vlc
 import tkinter as tk
+# import subprocess
+import math
+from pymediainfo import MediaInfo
 from PIL import Image, ImageTk
 from requests.adapters import HTTPAdapter
 
 from image_modification import ImageModification
 from globals import (
     GET_WEATHER_DELAY,
-    API_URL_BASE, API_URL, EXCLUDE_DIRS,
+    API_URL_BASE, API_URL, EXCLUDE_DIRS, ON_LINUX
 )
 import globals
 
@@ -52,7 +55,7 @@ def get_path_of_original_images(img_dir=globals.IMG_DIR):
             else:
                 output = get_path_of_original_images(file.path)
                 images += output
-        elif file.name.endswith((".jpg", ".png")):
+        elif file.name.endswith((".jpg", ".png", ".mp4", ".MP4")):
             images.append(f"{img_dir}/{file.name}")
         else:
             logger.warning(f"Not supported file format: {file.path}")
@@ -73,7 +76,13 @@ class Slideshow(tk.Tk):
         # Setup Label widget (for displaying images)
         self.picture_display = tk.Label(self)
         self.picture_display.configure(bg="black")
-        self.picture_display.pack(expand=True, fill="both")
+
+        # Setup Frame widget (to hold vlc player instance)
+        self.video_panel = tk.Frame(self)
+
+        # Initialise vlc player
+        # self.vlc_instance = vlc.Instance()
+        # self.vlc_player = self.vlc_instance.media_player_new()
 
         # Extras
         self.pictures = None
@@ -135,9 +144,18 @@ class Slideshow(tk.Tk):
         else:
             raise NotImplementedError("number of images is still None")
 
-        self.show_image(image_path)
+        # self.show_image(image_path)
+        if image_path.endswith((".jpg", ".png")):
+            self.show_image(image_path)
+        elif image_path.endswith((".MP4", ".mp4")):
+            self.play_video(image_path)
+        else:
+            raise NotImplementedError("We shouldn't ever reach here")
 
     def show_image(self, image_path):
+        # self.video_panel.pack_forget()
+        self.picture_display.pack(expand=True, fill="both")
+
         logger.debug("Opening image")
         original_image = Image.open(image_path)
         resized = original_image.resize(
@@ -154,6 +172,46 @@ class Slideshow(tk.Tk):
         self.picture_display.config(image=new_img)
         self.picture_display.image = new_img
         self.after(self.delay, self.show_slides)
+
+    def play_video(self, video_path):
+        # self.picture_display.pack_forget()
+        # $self.vlc_instance = vlc.Instance()
+        # self.vlc_player = self.vlc_instance.media_player_new()
+
+        # self.video_panel.pack(fill=tk.BOTH, expand=True)
+        # self.vlc_player.stop()
+
+        logger.info("Setting up video")
+
+        # if ON_LINUX:
+        # self.vlc_player.set_xwindow(self.video_panel.winfo_id())
+        # else:
+        # self.vlc_player.set_hwnd(self.video_panel.winfo_id())
+
+        # media = self.vlc_instance.media_new(video_path)  # media instance
+        # video_length = media.get_length()
+        # self.vlc_player.set_media(media)  # set media used by media player
+        # self.player.set_fullscreen(True)
+
+        logger.debug("Starting video")
+        # self.vlc_player.play()
+        process = os.system(f'cvlc -f --play-and-exit --no-audio {video_path}')
+
+        # while not self.vlc_player.is_playing():
+        #   pass
+
+        self.title(os.path.basename(video_path))
+        # self.after(self.vlc_player.get_length(), self.show_slides)
+        media_info = MediaInfo.parse(video_path)
+        print("getting media length")
+        video_length = media_info.tracks[0].duration
+        logger.debug(f"Video length = {video_length}")
+        video_length = video_length + 500
+        video_length = int(math.ceil(
+            video_length / 1000))  # get video length add 250ms and make an inreger rounded up.
+        self.after(video_length, self.show_slides)
+
+        # self.vlc_instance = None
 
     # noinspection PyUnusedLocal
     def close(self, event=None):

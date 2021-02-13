@@ -136,17 +136,16 @@ class ImageModification:
             stroke_width=self.stroke_width,
             stroke_fill=self.stroke_color,
         )
-
         return x
 
     def add_current_time(self):
         logger.debug("adding current time")
         current_time = time.strftime(self.current_time_format)
 
-        font = self.get_font(self.base_font_size * 2)
-        width, height = self.get_text_size(current_time, font)
+        font = self.get_font(int(self.base_font_size * 1.25))        
+        width, height = self.get_text_size(current_time, font)        
         x = self.right_border - width
-        y = self.bottom_border - self.general_text_height - height
+        y = self.bottom_border - self.general_text_height - height - 25
         self.draw.text(
             (x, y),
             current_time,
@@ -161,7 +160,7 @@ class ImageModification:
         exif = self.img.getexif()
         img_title = (exif.get(270, "").strip())
 
-        font = self.get_font(int(self.base_font_size * 1.5))
+        font = self.get_font(int(self.base_font_size))
         width, height = self.get_text_size(img_title, font)
 
         x = self.img_width / 2 - width / 2
@@ -255,6 +254,7 @@ class ImageModification:
         # Add weather icon to image
         weather_icon = WEATHER_ICONS.get(self.weather_icon, None)
         minimum_icon_height = self.general_text_height * 2
+        #print(f"Mininum icon height: {minimum_icon_height}")
 
         if minimum_icon_height < 32:
             icon_path = f"./icons/32px/{weather_icon}.png"
@@ -262,14 +262,18 @@ class ImageModification:
             icon_path = f"./icons/64px/{weather_icon}.png"
         elif minimum_icon_height < 128:
             icon_path = f"./icons/128px/{weather_icon}.png"
+        elif minimum_icon_height < 220: #altered to use 192px icons, height was 216px
+            icon_path = f"./icons/192px/{weather_icon}.png"
         elif minimum_icon_height < 256:
             icon_path = f"./icons/256px/{weather_icon}.png"
+            print("Using 256px")
         else:
             icon_path = f"./icons/512px/{weather_icon}.png"
         icon_img = Image.open(icon_path)
         icon_width, icon_height = icon_img.size
 
-        x = current_date_x - self.grid_cell_width - icon_width
+        #x = current_date_x - self.grid_cell_width - icon_width
+        x = current_date_x - int(icon_width * 1.1)
         y = self.bottom_border - icon_height
 
         self.img.paste(icon_img, box=(x, y), mask=icon_img)
@@ -283,7 +287,8 @@ class ImageModification:
 
         width, height = self.get_text_size(self.temp, self.base_font)
 
-        x = weather_x - self.grid_cell_width - width
+        #x = weather_x - self.grid_cell_width - width
+        x = weather_x - int( width * 1.1)
         y = self.bottom_border - height
 
         self.draw.text(
